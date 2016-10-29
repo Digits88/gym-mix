@@ -1,0 +1,1 @@
+A mix of OpenAI-gym environments mainly for continuous control.
