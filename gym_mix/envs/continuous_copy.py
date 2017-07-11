@@ -26,7 +26,7 @@ class ContinuousCopyEnv(gym.Env):
     def _step(self, action):
         reward = np.squeeze(- 1. * np.abs(self.state-action))
         
-        done = False
+        done = True
         return self.next(), reward, done, {}
 
     def _reset(self):
@@ -50,5 +50,5 @@ class ContinuousCopyRandEnv(ContinuousCopyEnv):
         random policy with a ~ uniform(-0.5,0.5) has E[r] = 1/3 
     """
     def next(self):
-        self.state = 1. * self.np_random.uniform(-sc,sc,size=[1])
+        self.state = 1. * np.random.uniform(-sc,sc,size=[1])
         return self.state

@@ -6,45 +6,61 @@ DEBUG = True
 class ChainEnv(core.Env):
 
   metadata = {
-    'render.modes': ['human', 'rgb_array'],
+    'render.modes': [],
     'video.frames_per_second' : 15
   }
 
-  shape = [100]
+  max_return = 10
 
-  def __init__(self):
-    self.n = 3 # max n = 49
-    self.observation_space = spaces.Box(np.zeros(self.shape),np.ones(self.shape))
+  def __init__(self, n = 4):
+    self.n = n  # max n = 49
+    self.observation_space = spaces.Box(np.zeros(self.n+2), np.ones(self.n+2))
     self.action_space = spaces.Discrete(2)
-    self.viewer = None
-    self.obs = np.zeros([100])
 
   def _reset(self):
-    self.t = 1
-    self.state = self.n
-    return self.observe()
+    self.t = 0
+    self.state = 1
+    return self.features()
 
   def _step(self, action):
-    # action in {0,1}
-    self.state = np.clip(self.state - 1 + 2 * action,0,2*self.n)
-    
-    if self.state == 0:
-      reward = .001
-    elif self.state == 2 * self.n:
-      reward = 1
-    else:
-      reward = 0
+    self.state = int(np.clip(self.state + np.squeeze(action) * 2 - 1, 0, self.n+1))
 
-    terminal = not self.t < 9 + self.n
-
+    r = .0001 * (self.state == 0) + 1. * (self.state == self.n+1)
     self.t += 1
 
-    return (self.observe(), reward, terminal, {})
+    terminal = self.t >= 9 + self.n
+    return self.features(), r, terminal, {}
+
+  def features(self):
+    f = np.zeros(self.n+2)
+    f[self.state] = 1
+    return f
 
 
-  def observe(self):
-    self.obs[:] = 0
-    self.obs[:self.state] = 1
-    pixels = np.reshape(self.obs, self.shape)
-    return pixels
+class ContinuousChainEnv():
 
+  metadata = {
+    'render.modes': [],
+    'video.frames_per_second' : 15
+  }
+
+  max_return = 10
+
+  def __init__(self, n = 4):
+    self.n = n  # max n = 49
+    self.observation_space = spaces.Box(np.zeros(self.n), np.ones(self.n))
+    self.action_space = spaces.Box(np.array([-1]), np.array([1]))
+
+
+  def _step(self, action):
+    action = np.clip(np.squeeze(action), -1, 1)
+
+    self.state = np.clip(self.state + action, 0, self.n + 1)
+
+    pos = np.atleast_2d(np.arange(0, self.n)) - self.state
+    features = np.exp(- np.square(pos))
+
+    reward = .0001 * (self.state < 1) + 1. * (self.state > self.n)
+    terminal = self.t >= 9 + self.n
+
+    return features, reward, terminal, {}
